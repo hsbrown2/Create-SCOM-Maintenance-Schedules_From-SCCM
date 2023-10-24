@@ -533,7 +533,7 @@ $version = (Get-SCOMManagementPack  | Select-Object Name,Version | Where-Object 
 if($null -ne $version){
     $xml = New-Object XML
     $xml.load($filetowrite)
-    $version = (Get-SCOMManagementPack  | Select-Object Name,Version | Where-Object {$_.Name -eq "MCM.Maintenance.Windows.Management.Pack"}).Version
+    $version = (Get-SCOMManagementPack  | Select-Object Name,Version | Where-Object {$_.Name -eq "$mp"}).Version
     $revision = ($version.Revision + 1)
     $newversion = [string]$version.Major +  '.' + [string]$version.Minor + '.' + [string]$version.Build  + '.' + [string]$revision
     $node = $xml.ManagementPack.Manifest.Identity
@@ -594,7 +594,7 @@ $actionlist = New-Object System.Collections.ArrayList
 foreach($object in $mcmlist){
     $fqdn = $object.Computername + '.' + $object.Domain
     $objectid = ($scomlist | Select-Object ID,DisplayName | Where-Object {$_.DisplayName -eq $fqdn}).ID.Guid
-    $groupfullname = 'MCM.Maintenance.Windows.Management.Pack.' + $object.CollectionId
+    $groupfullname = '$mp.' + $object.CollectionId
     $groupdisplayname = "Configuration Manager Collection - " + $object.CollectionName
     $theschedule = ConvertFrom-CCMSchedule $object.Schedules
     $y = New-Object PSCustomObject
@@ -633,7 +633,7 @@ $schedulelist = $actionlist | Select-Object ScheduleID,Schedules,GroupFullName,G
 Write-Debug "Begin looping through each collection and schedule..."
 
 #We have to create a new list of groups that has the GUID of the group we want to put in recursive Maintenance Mode. The GUID does not exist until after the group is created.
-$cmgrouplist = Get-SCOMClass -DisplayName "Group" | Get-SCOMClassInstance | Select-Object FullName,Id | Where-Object {$_.FullName -like 'MCM.Maintenance.Windows.Management.Pack.*'}
+$cmgrouplist = Get-SCOMClass -DisplayName "Group" | Get-SCOMClassInstance | Select-Object FullName,Id | Where-Object {$_.FullName -like "$mp.*"}
 
 #Get a list of the existing schedules
 $scomschedules = Get-SCOMMaintenanceScheduleList | Select-Object ScheduleName,ScheduleID | Where-Object {$_.ScheduleName -like "Configuration Manager Collection - *"}
