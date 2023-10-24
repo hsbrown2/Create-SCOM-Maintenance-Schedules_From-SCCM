@@ -1,6 +1,7 @@
 <#
 
 .SYNOPSIS
+    
     This script will generate System Center Operations Manager Maintenance Schedules based upon Microsoft Configuration Manager Maintenance Windows.
 
 .DESCRIPTION
@@ -38,6 +39,7 @@
     Appears in -full
 
 .LINK
+
     https://github.com/hsbrown2/Create-SCOM-Maintenance-Schedules_From-SCCM
 
 .EXAMPLE
@@ -45,19 +47,21 @@
     Create SCOM Maintenance Mode Schedules from SCCM Mainetenance Windows silently
     .\Create-SCOM-Maintenance-Schedules_From-SCCM.ps1 -SCCMConnection <MCM SITE SERVER> -SCOMConnection <SCOM MANAGEMENT SERVER> -ManagementPack <MANAGEMENT.PACK.NAME>
 
+
 .EXAMPLE
 
     Create SCOM Maintenance Mode Schedules from SCCM Mainetenance Windows with Debug output
     .\Create-SCOM-Maintenance-Schedules_From-SCCM.ps1 -SCCMConnection <MCM SITE SERVER> -SCOMConnection <SCOM MANAGEMENT SERVER> -ManagementPack <MANAGEMENT.PACK.NAME> -Debug
 
+
 .COMPONENT
+    
     Required PowerShell Modules:
         OperationsManager
 
     Required files:
         BASEMP.xml
 #>
-
 
 [CmdletBinding()]
 PARAM
@@ -533,15 +537,41 @@ $version = (Get-SCOMManagementPack  | Select-Object Name,Version | Where-Object 
 if($null -ne $version){
     $xml = New-Object XML
     $xml.load($filetowrite)
-    $version = (Get-SCOMManagementPack  | Select-Object Name,Version | Where-Object {$_.Name -eq "$mp"}).Version
     $revision = ($version.Revision + 1)
     $newversion = [string]$version.Major +  '.' + [string]$version.Minor + '.' + [string]$version.Build  + '.' + [string]$revision
     $node = $xml.ManagementPack.Manifest.Identity
     $node.Version = $newversion
     $xml.Save($filetowrite)
 }
-####END COPY STUB MANAGERMENT PACK FOR EDITING####
 
+$xml = New-Object XML
+$xml.load($filetowrite)
+$ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+$ns.AddNamespace("ns", $xml.DocumentElement.NamespaceURI)#Load the namespace so we can refer to leafs explicitly
+
+$node = $xml.ManagementPack.Manifest.Identity
+$node.ID = $mp
+
+$node = $xml.SelectSingleNode("//ns:LanguagePack[@ID='ENU']/DisplayStrings", $ns)
+$DisplayString = $xml.CreateElement('DisplayString')
+$DisplayString.SetAttribute('ElementID',"$mp")
+$node.AppendChild($DisplayString) | Out-Null
+
+$node = $xml.SelectSingleNode("//ns:LanguagePack[@ID='ENU']/DisplayStrings/DisplayString[@ElementID='$mp']", $ns)
+$Name = $xml.CreateElement('Name')
+$DisplayName = $mp.Replace('.',' ')
+$Name.InnerText = "$DisplayName"
+$node.AppendChild($Name) | Out-Null
+
+$node = $xml.SelectSingleNode("//ns:LanguagePack[@ID='ENU']/DisplayStrings/DisplayString[@ElementID='$mp']", $ns)
+$Description = $xml.CreateElement('Description')
+$Description.InnerText = "This Management Pack contains all auto-generated groups for Configuration Manager Collections"
+$node.AppendChild($Description) | Out-Null
+
+$xml.Save($filetowrite)
+
+
+####END COPY STUB MANAGERMENT PACK FOR EDITING####
 #Build a comma-separated list of all the systems in SCOM
 #Pass this list in as a filter in the SQL query below, to ensure we only retrieve systems
 #from MCM that are also in SCOM (and only servers)
@@ -594,7 +624,7 @@ $actionlist = New-Object System.Collections.ArrayList
 foreach($object in $mcmlist){
     $fqdn = $object.Computername + '.' + $object.Domain
     $objectid = ($scomlist | Select-Object ID,DisplayName | Where-Object {$_.DisplayName -eq $fqdn}).ID.Guid
-    $groupfullname = '$mp.' + $object.CollectionId
+    $groupfullname = "$mp" + '.' + $object.CollectionId
     $groupdisplayname = "Configuration Manager Collection - " + $object.CollectionName
     $theschedule = ConvertFrom-CCMSchedule $object.Schedules
     $y = New-Object PSCustomObject
@@ -620,15 +650,15 @@ foreach($group in $GroupList){
     $memberlist = ($actionlist | Select-Object ObjectID,GroupFullName | Where-Object {$_.GroupFullName -eq $group.GroupFullName}).ObjectID
     Write-ToMP -GN $group.GroupFullName -GDN $group.GroupDisplayName -M $memberlist -MP $filetowrite
 }
-####END WRITE NEW MANAGEMENT PACK FOR GROUPS####
-
 
 #Import the generated Management Pack
 Import-SCManagementPack $filetowrite
 
 Write-Host "Sleeping for three minutes to allow processing of the Management Pack to complete..."
 Start-Sleep -Seconds 180
+####END WRITE NEW MANAGEMENT PACK FOR GROUPS####
 
+####START CREATE SCHEDULES####
 $schedulelist = $actionlist | Select-Object ScheduleID,Schedules,GroupFullName,GroupDisplayName,ScheduleName -Unique
 Write-Debug "Begin looping through each collection and schedule..."
 
@@ -807,3 +837,4 @@ foreach($schedule in $schedulelist){
         
     }
 } 
+####END CREATE SCHEDULES####
