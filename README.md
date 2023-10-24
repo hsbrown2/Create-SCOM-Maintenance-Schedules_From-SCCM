@@ -1,4 +1,5 @@
 .SYNOPSIS
+    
     This script will generate System Center Operations Manager Maintenance Schedules based upon Microsoft Configuration Manager Maintenance Windows.
 
 .DESCRIPTION
@@ -36,6 +37,7 @@
     Appears in -full
 
 .LINK
+    
     https://github.com/hsbrown2/Create-SCOM-Maintenance-Schedules_From-SCCM
 
 .EXAMPLE
@@ -49,8 +51,10 @@
     .\Create-SCOM-Maintenance-Schedules_From-SCCM.ps1 -SCCMConnection <MCM SITE SERVER> -SCOMConnection <SCOM MANAGEMENT SERVER> -ManagementPack <MANAGEMENT.PACK.NAME> -Debug
 
 .COMPONENT
+    
     Required PowerShell Modules:
         OperationsManager
 
     Required files:
+        
         BASEMP.xml
