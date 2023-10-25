@@ -32,10 +32,6 @@
   <LanguagePacks>
     <LanguagePack ID="ENU" IsDefault="true">
       <DisplayStrings>
-        <DisplayString ElementID="MCM.Maintenance.Windows.Management.Pack">
-          <Name>MCM Maintenance Windows Management Pack</Name>
-          <Description>This Management Pack contains all auto-generated groups for Configuration Manager Collections</Description>
-        </DisplayString>
       </DisplayStrings>
     </LanguagePack>
   </LanguagePacks>
